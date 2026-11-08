@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Glass Lock</string>
+    <string name="service_channel">Lock screen service</string>
+    <string name="service_title">Glass Lock is on</string>
+    <string name="service_text">Your glass lock screen appears whenever the screen turns on</string>
+</resources>

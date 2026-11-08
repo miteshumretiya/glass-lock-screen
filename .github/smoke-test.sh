@@ -90,6 +90,7 @@ adb shell input keyevent KEYCODE_WAKEUP
 sleep 5
 shot 07-second-wake
 
+adb shell dumpsys notification --noredact > "$OUT/dumpsys-notification.txt" 2>&1
 adb logcat -d > "$OUT/logcat-full.txt"
 grep -E "AndroidRuntime|FATAL|GlassLock|glasslock|RuntimeShader|ANR" "$OUT/logcat-full.txt" > "$OUT/logcat-app.txt" || true
 exit 0

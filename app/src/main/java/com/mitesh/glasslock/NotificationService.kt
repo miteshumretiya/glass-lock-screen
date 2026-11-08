@@ -7,6 +7,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
+import android.util.Log
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.app.NotificationManagerCompat
@@ -58,32 +59,37 @@ class NotificationService : NotificationListenerService() {
         } catch (e: Exception) {
             null
         }
-        itemsFlow.value = active.asSequence()
-            .filter { keep(it, ranking) }
+        val kept = ArrayList<StatusBarNotification>()
+        for (sbn in active) {
+            val reason = skipReason(sbn, ranking)
+            if (reason == null) kept.add(sbn) else Log.d(TAG, "skip ${sbn.packageName}: $reason")
+        }
+        Log.d(TAG, "notifications: ${active.size} active, ${kept.size} shown")
+        itemsFlow.value = kept
             .sortedByDescending { it.postTime }
             .take(40)
             .map { toModel(it) }
-            .toList()
     }
 
-    private fun keep(sbn: StatusBarNotification, ranking: RankingMap?): Boolean {
-        if (sbn.packageName == packageName) return false
-        val n: Notification = sbn.notification ?: return false
-        if (sbn.isOngoing) return false
-        if ((n.flags and Notification.FLAG_GROUP_SUMMARY) != 0) return false
-        if ((n.flags and Notification.FLAG_FOREGROUND_SERVICE) != 0) return false
-        if (n.visibility == Notification.VISIBILITY_SECRET) return false
+    /** Why a notification stays off the lock screen, or null to show it. */
+    private fun skipReason(sbn: StatusBarNotification, ranking: RankingMap?): String? {
+        if (sbn.packageName == packageName) return "own"
+        val n: Notification = sbn.notification ?: return "empty"
+        if (sbn.isOngoing) return "ongoing"
+        if ((n.flags and Notification.FLAG_GROUP_SUMMARY) != 0) return "group summary"
+        if ((n.flags and Notification.FLAG_FOREGROUND_SERVICE) != 0) return "foreground service"
+        if (n.visibility == Notification.VISIBILITY_SECRET) return "secret"
         if (ranking != null) {
             val r = Ranking()
             if (ranking.getRanking(sbn.key, r)) {
-                if (r.importance <= NotificationManager.IMPORTANCE_MIN) return false
-                if (r.lockscreenVisibilityOverride == Notification.VISIBILITY_SECRET) return false
+                if (r.importance in 0..NotificationManager.IMPORTANCE_MIN) return "importance ${r.importance}"
+                if (r.lockscreenVisibilityOverride == Notification.VISIBILITY_SECRET) return "hidden on lock screen"
             }
         }
-        val extras = n.extras ?: return false
+        val extras = n.extras ?: return "no extras"
         val title = extras.getCharSequence(Notification.EXTRA_TITLE)
         val text = extras.getCharSequence(Notification.EXTRA_TEXT)
-        return !(title.isNullOrBlank() && text.isNullOrBlank())
+        return if (title.isNullOrBlank() && text.isNullOrBlank()) "no text" else null
     }
 
     private fun toModel(sbn: StatusBarNotification): LockNotification {
@@ -124,6 +130,7 @@ class NotificationService : NotificationListenerService() {
     }
 
     companion object {
+        private const val TAG = "GlassLock"
         private val itemsFlow = MutableStateFlow<List<LockNotification>>(emptyList())
         val items: StateFlow<List<LockNotification>> = itemsFlow.asStateFlow()
 

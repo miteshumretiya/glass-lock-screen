@@ -66,6 +66,7 @@ import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.withTransform
@@ -198,6 +199,7 @@ fun GlassClock(text: String, maxWidth: Dp, targetHeight: Dp, modifier: Modifier 
                 layout,
                 color = Color.Black.copy(alpha = 0.03f),
                 shadow = Shadow(Color.Black.copy(alpha = 0.28f), Offset(0f, 3.dp.toPx()), 20.dp.toPx()),
+                drawStyle = Fill,
             )
             var filled = false
             if (env != null && holder != null && Build.VERSION.SDK_INT >= 33 && !GlassShaders.broken) {
@@ -212,6 +214,7 @@ fun GlassClock(text: String, maxWidth: Dp, targetHeight: Dp, modifier: Modifier 
                         endY = bottom,
                     ),
                     alpha = 0.92f,
+                    drawStyle = Fill,
                 )
             }
             // Specular rim: bright where it faces the light, fading across the glyph.
@@ -260,7 +263,8 @@ private fun DrawScope.drawClockGlass(
             top = top,
             bottom = bottom,
         )
-        drawText(layout, brush = ShaderBrush(text.shader), alpha = 0.94f)
+        // The text paint is shared between draws, so the style must be reset from the rim's Stroke.
+        drawText(layout, brush = ShaderBrush(text.shader), alpha = 0.94f, drawStyle = Fill)
         true
     } catch (t: Throwable) {
         GlassShaders.broken = true
@@ -347,6 +351,7 @@ private fun BatteryGlyph(level: Int, charging: Boolean) {
             color = Color.Black,
             topLeft = Offset((bodyW - label.size.width) / 2f, (size.height - label.size.height) / 2f),
             blendMode = BlendMode.DstOut,
+            drawStyle = Fill,
         )
     }
 }

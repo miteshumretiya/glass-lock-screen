@@ -25,9 +25,9 @@ sleep 6
 shot 01-setup
 
 # Test notifications
-adb shell cmd notification post -S bigtext -t "Mum" dinner "Dinner at 8? Bring the dessert please"
+adb shell cmd notification post -S bigtext -t "Mum" dinner "Dinner at 8? Bring the dessert please" 2>&1 | tee -a "$OUT/notify.txt"
 sleep 1
-adb shell cmd notification post -S bigtext -t "Alex" late "Running 5 minutes late, see you soon"
+adb shell cmd notification post -S bigtext -t "Alex" late "Running 5 minutes late, see you soon" 2>&1 | tee -a "$OUT/notify.txt"
 sleep 2
 
 # 2. Preview from the setup screen

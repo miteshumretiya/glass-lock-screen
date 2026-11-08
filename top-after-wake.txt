@@ -1,0 +1,2 @@
+    topResumedActivity=ActivityRecord{928402e u0 com.mitesh.glasslock/.LockActivity t11}
+  ResumedActivity: ActivityRecord{928402e u0 com.mitesh.glasslock/.LockActivity t11}

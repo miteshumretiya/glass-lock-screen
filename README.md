@@ -33,7 +33,9 @@ If your Always‑on display stops appearing, turn off "Get ready when the screen
 
 ## Build
 
-Every push to `main` builds a signed release APK with GitHub Actions and publishes it as a release.
+Every push to `main` builds a release APK with GitHub Actions and publishes it as a release.
+Add a repository secret named `SIGNING_PASSWORD` (Settings → Secrets and variables → Actions) so
+builds are signed with the app's permanent key from `signing/` and install as updates.
 Locally: open in Android Studio, or run `gradle :app:assembleRelease` with JDK 17 and the Android SDK.
 
 Fonts: Inter (SIL Open Font License, see `licenses/`).

@@ -30,23 +30,42 @@ jobs:
 
       - name: Prepare signing key
         env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
         run: |
-          if [ -n "$KEYSTORE_BASE64" ]; then
-            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
-            echo "KEYSTORE_FILE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+          if [ -n "$SIGNING_PASSWORD" ]; then
+            openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in signing/release.jks.enc \
+              -out "$RUNNER_TEMP/release.jks" -pass env:SIGNING_PASSWORD
+            {
+              echo "KEYSTORE_FILE=$RUNNER_TEMP/release.jks"
+              echo "KEY_ALIAS=glasslock"
+            } >> "$GITHUB_ENV"
           else
-            echo "::warning::No signing key secret set; the APK will be signed with a throwaway debug key."
+            echo "::warning::SIGNING_PASSWORD secret not set; signing with a throwaway debug key."
           fi
 
       - name: Build release APK
         env:
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEYSTORE_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
           VERSION_CODE: ${{ github.run_number }}
           VERSION_NAME: 1.0.${{ github.run_number }}
-        run: gradle :app:assembleRelease --stacktrace --no-daemon
+        run: |
+          set -o pipefail
+          gradle :app:assembleRelease --stacktrace --no-daemon --console=plain 2>&1 | tee "$RUNNER_TEMP/build.log"
+
+      - name: Share the build log if it failed
+        if: failure()
+        run: |
+          mkdir -p "$RUNNER_TEMP/log"
+          cd "$RUNNER_TEMP/log"
+          grep -nE "^e: |error:|FAILURE|What went wrong|Could not|> Task .*FAILED|Exception" "$RUNNER_TEMP/build.log" | head -300 > errors.txt || true
+          tail -400 "$RUNNER_TEMP/build.log" > tail.txt || true
+          git init -q
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add errors.txt tail.txt
+          git commit -q -m "Build ${{ github.run_number }} failed"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" HEAD:build-log
 
       - name: Name the APK
         run: cp app/build/outputs/apk/release/app-release.apk "GlassLock-1.0.${{ github.run_number }}.apk"
